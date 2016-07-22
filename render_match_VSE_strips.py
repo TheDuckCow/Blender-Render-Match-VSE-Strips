@@ -15,6 +15,7 @@ class SEQUENCE_OT_match_sequence_resolution(bpy.types.Operator):
 	"""Change the render settings and scene length to match selected strips"""
 	bl_label = "Match Strip"
 	bl_idname = "sequencer.match_sequence_resolution"
+	bl_options = {'REGISTER', 'UNDO'}
 
 
 	def execute(self, context):
