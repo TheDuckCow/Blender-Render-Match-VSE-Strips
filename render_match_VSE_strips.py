@@ -1,15 +1,27 @@
 bl_info = {
-    "name": "Render Match VSE Strips",
-    "description": "Operator that sets render resolution and start/end frame to match selected VSE strips",
-    "author": "Patrick W. Crawford",
-    "version": (1, 1),
-    "blender": (2, 7, 7),
-    "location": "VSE strip editor > Properties > Edit Strip (Panel): Match Strips",
-    "wiki_url": "",
-    "tracker_url":"",
-    "category": "Sequencer"}
+	"name": "Render Match VSE Strips",
+	"description": "Operator that sets render resolution and start/end frame to match selected VSE strips",
+	"author": "Patrick W. Crawford",
+	"version": (1, 2),
+	"blender": (2, 80, 0),
+	"location": "VSE strip editor > Properties > Edit Strip (Panel): Match Strips",
+	"wiki_url": "",
+	"tracker_url":"",
+	"category": "Sequencer"
+ }
+
 
 import bpy
+
+
+BV_IS_28 = None  # global initialization
+def bv28():
+	"""Check if blender 2.8, for layouts, UI, and properties. """
+	global BV_IS_28
+	if not BV_IS_28:
+		BV_IS_28 = hasattr(bpy.app, "version") and bpy.app.version >= (2, 80)
+	return BV_IS_28
+
 
 class SEQUENCE_OT_match_sequence_resolution(bpy.types.Operator):
 	"""Change the render settings and scene length to match selected strips"""
@@ -17,6 +29,9 @@ class SEQUENCE_OT_match_sequence_resolution(bpy.types.Operator):
 	bl_idname = "sequencer.match_sequence_resolution"
 	bl_options = {'REGISTER', 'UNDO'}
 
+	@classmethod
+	def poll(self, context):
+		return context.scene.sequence_editor.active_strip != None
 
 	def execute(self, context):
 
@@ -25,11 +40,11 @@ class SEQUENCE_OT_match_sequence_resolution(bpy.types.Operator):
 		if seq_active.type == None or seq_active.type in ['SOUND','TRANSFORM']:
 			self.report({'ERROR'}, "Active strip must be an image or video with inherent resolution")
 			return {'CANCELLED'}
-		
+
 		# include active as well
 		if seq_active not in selection:
 			selection.append(seq_active)
-		
+
 		# base settings on the active strip
 		context.scene.render.resolution_x = seq_active.elements[0].orig_width
 		context.scene.render.resolution_y = seq_active.elements[0].orig_height
@@ -74,7 +89,6 @@ class SEQUENCE_OT_show_hide_strip_modifiers(bpy.types.Operator):
 
 
 	def execute(self, context):
-
 		stps = []
 		if self.selection_only==True:
 			stps = [seq for seq in context.scene.sequence_editor.sequences if seq.select]
@@ -83,7 +97,7 @@ class SEQUENCE_OT_show_hide_strip_modifiers(bpy.types.Operator):
 
 		for stp in stps:
 			for mod in stp.modifiers:
-				print(stp, mod)
+				# print(stp, mod)
 				if self.showhide=="show":
 					mod.mute=False
 				elif self.showhide=="hide":
@@ -100,6 +114,7 @@ class SEQUENCE_OT_show_hide_strip_modifiers(bpy.types.Operator):
 def panel_append(self, context):
 	self.layout.operator(SEQUENCE_OT_match_sequence_resolution.bl_idname)
 
+
 def header_append(self, context):
 	row = self.layout.row(align=True)
 	row.operator(SEQUENCE_OT_show_hide_strip_modifiers.bl_idname,
@@ -108,21 +123,58 @@ def header_append(self, context):
 		icon="ARROW_LEFTRIGHT",text="").showhide = "toggle"
 	row.operator(SEQUENCE_OT_show_hide_strip_modifiers.bl_idname,
 		icon="RESTRICT_VIEW_ON",text="").showhide = "hide"
-	
+
+
+def make_annotations(cls):
+	"""Add annotation attribute to class fields to avoid Blender 2.8 warnings"""
+	if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
+		return cls
+	bl_props = {k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)}
+	if bl_props:
+		if '__annotations__' not in cls.__dict__:
+			setattr(cls, '__annotations__', {})
+		annotations = cls.__dict__['__annotations__']
+		for k, v in bl_props.items():
+			annotations[k] = v
+			delattr(cls, k)
+	return cls
+
+
+classes = (
+	SEQUENCE_OT_match_sequence_resolution,
+	SEQUENCE_OT_show_hide_strip_modifiers
+)
 
 
 def register():
-	bpy.utils.register_class(SEQUENCE_OT_match_sequence_resolution)
-	bpy.utils.register_class(SEQUENCE_OT_show_hide_strip_modifiers)
-	bpy.types.SEQUENCER_PT_edit.append(panel_append)
-	bpy.types.SEQUENCER_HT_header.append(header_append)
+	for cls in classes:
+		make_annotations(cls)
+		bpy.utils.register_class(cls)
+
+	if bv28():
+		bpy.types.SEQUENCER_MT_editor_menus.append(panel_append)
+		bpy.types.SEQUENCER_MT_editor_menus.append(header_append)
+		# bpy.types.SEQUENCER_HT_header.append(header_append)
+	else:
+		bpy.types.SEQUENCER_PT_edit.append(panel_append)
+		bpy.types.SEQUENCER_HT_header.append(panel_append)
+		bpy.types.SEQUENCER_HT_header.append(header_append)
+
 
 def unregister():
 	bpy.utils.unregister_class(SEQUENCE_OT_match_sequence_resolution)
 	bpy.utils.unregister_class(SEQUENCE_OT_show_hide_strip_modifiers)
-	bpy.types.SEQUENCER_PT_edit.remove(panel_append)
-	bpy.types.SEQUENCER_HT_header.append(header_append)
+	if bv28():
+		bpy.types.SEQUENCER_MT_editor_menus.remove(panel_append)
+		bpy.types.SEQUENCER_MT_editor_menus.remove(header_append)
+	else:
+		bpy.types.SEQUENCER_PT_edit.remove(panel_append)
+		bpy.types.SEQUENCER_HT_header.remove(panel_append)
+		bpy.types.SEQUENCER_HT_header.remove(header_append)
+
+	for cls in reversed(classes):
+		bpy.utils.unregister_class(cls)
 
 
 if __name__ == "__main__":
-    register()
+	register()
