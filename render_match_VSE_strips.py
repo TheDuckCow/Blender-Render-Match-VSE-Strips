@@ -3,24 +3,20 @@ bl_info = {
 	"description": "Operator that sets render resolution and start/end frame to match selected VSE strips",
 	"author": "Patrick W. Crawford",
 	"version": (1, 2),
-	"blender": (2, 80, 0),
+	"blender": (2, 80, 0),  # Supports through blender 3.0 at a minimum.
 	"location": "VSE strip editor > Properties > Edit Strip (Panel): Match Strips",
 	"wiki_url": "",
-	"tracker_url":"",
+	"tracker_url": "",
 	"category": "Sequencer"
- }
+}
 
 
 import bpy
 
 
-BV_IS_28 = None  # global initialization
 def bv28():
 	"""Check if blender 2.8, for layouts, UI, and properties. """
-	global BV_IS_28
-	if not BV_IS_28:
-		BV_IS_28 = hasattr(bpy.app, "version") and bpy.app.version >= (2, 80)
-	return BV_IS_28
+	return hasattr(bpy.app, "version") and bpy.app.version >= (2, 80)
 
 
 class SEQUENCE_OT_match_sequence_resolution(bpy.types.Operator):
@@ -31,14 +27,17 @@ class SEQUENCE_OT_match_sequence_resolution(bpy.types.Operator):
 
 	@classmethod
 	def poll(self, context):
-		return context.scene.sequence_editor.active_strip != None
+		return context.scene.sequence_editor.active_strip is not None
 
 	def execute(self, context):
-
-		selection = [seq for seq in context.scene.sequence_editor.sequences if seq.select]
+		selection = [
+			seq for seq in context.scene.sequence_editor.sequences
+			if seq.select]
 		seq_active = context.scene.sequence_editor.active_strip
-		if seq_active.type == None or seq_active.type in ['SOUND','TRANSFORM']:
-			self.report({'ERROR'}, "Active strip must be an image or video with inherent resolution")
+		if seq_active.type is None or seq_active.type in ['SOUND', 'TRANSFORM']:
+			self.report(
+				{'ERROR'},
+				"Active strip must be an image or video with inherent resolution")
 			return {'CANCELLED'}
 
 		# include active as well
@@ -62,7 +61,7 @@ class SEQUENCE_OT_match_sequence_resolution(bpy.types.Operator):
 			if startframe > seq.frame_final_start:
 				startframe = seq.frame_final_start
 
-		context.scene.frame_end = endframe-1
+		context.scene.frame_end = endframe - 1
 		context.scene.frame_start = startframe
 
 		return {'FINISHED'}
@@ -81,27 +80,29 @@ class SEQUENCE_OT_show_hide_strip_modifiers(bpy.types.Operator):
 		description="Only apply to selected strips")
 
 	showhide = bpy.props.EnumProperty(
-		items = [('show', 'Show', 'Make modifiers visible'),
-				('hide', 'Hide', 'Make modifiers not visible'),
-				('toggle', 'Toggle', 'Toggle modifier visilibity per modifier')],
-		name = "show/hide",
-		description = "Show, hide, or toggle all strip modifier")
-
+		items=[
+			('show', 'Show', 'Make modifiers visible'),
+			('hide', 'Hide', 'Make modifiers not visible'),
+			('toggle', 'Toggle', 'Toggle modifier visilibity per modifier')],
+		name="show/hide",
+		description="Show, hide, or toggle all strip modifier")
 
 	def execute(self, context):
 		stps = []
-		if self.selection_only==True:
-			stps = [seq for seq in context.scene.sequence_editor.sequences if seq.select]
+		if self.selection_only is True:
+			stps = [
+				seq for seq in context.scene.sequence_editor.sequences
+				if seq.select]
 		else:
 			stps = context.scene.sequence_editor.sequences
 
 		for stp in stps:
 			for mod in stp.modifiers:
 				# print(stp, mod)
-				if self.showhide=="show":
-					mod.mute=False
-				elif self.showhide=="hide":
-					mod.mute=True
+				if self.showhide == "show":
+					mod.mute = False
+				elif self.showhide == "hide":
+					mod.mute = True
 				else:
 					mod.mute = not mod.mute
 
@@ -117,12 +118,15 @@ def panel_append(self, context):
 
 def header_append(self, context):
 	row = self.layout.row(align=True)
-	row.operator(SEQUENCE_OT_show_hide_strip_modifiers.bl_idname,
-		icon="RESTRICT_VIEW_OFF",text="").showhide = "show"
-	row.operator(SEQUENCE_OT_show_hide_strip_modifiers.bl_idname,
-		icon="ARROW_LEFTRIGHT",text="").showhide = "toggle"
-	row.operator(SEQUENCE_OT_show_hide_strip_modifiers.bl_idname,
-		icon="RESTRICT_VIEW_ON",text="").showhide = "hide"
+	row.operator(
+		SEQUENCE_OT_show_hide_strip_modifiers.bl_idname,
+		icon="RESTRICT_VIEW_OFF", text="").showhide = "show"
+	row.operator(
+		SEQUENCE_OT_show_hide_strip_modifiers.bl_idname,
+		icon="ARROW_LEFTRIGHT", text="").showhide = "toggle"
+	row.operator(
+		SEQUENCE_OT_show_hide_strip_modifiers.bl_idname,
+		icon="RESTRICT_VIEW_ON", text="").showhide = "hide"
 
 
 def make_annotations(cls):
