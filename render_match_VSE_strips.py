@@ -2,7 +2,7 @@ bl_info = {
 	"name": "Render Match VSE Strips",
 	"description": "Operator that sets render resolution and start/end frame to match selected VSE strips",
 	"author": "Patrick W. Crawford",
-	"version": (1, 2),
+	"version": (1, 3),
 	"blender": (2, 80, 0),  # Supports through blender 3.0 at a minimum.
 	"location": "VSE strip editor > Properties > Edit Strip (Panel): Match Strips",
 	"wiki_url": "",
@@ -172,8 +172,6 @@ def register():
 
 
 def unregister():
-	bpy.utils.unregister_class(SEQUENCE_OT_match_sequence_resolution)
-	bpy.utils.unregister_class(SEQUENCE_OT_show_hide_strip_modifiers)
 	if bv28():
 		bpy.types.SEQUENCER_MT_editor_menus.remove(panel_append)
 		bpy.types.SEQUENCER_MT_editor_menus.remove(header_append)
